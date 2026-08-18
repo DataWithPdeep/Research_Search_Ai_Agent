@@ -5,23 +5,44 @@ from  bs4 import BeautifulSoup
 from tavily import TavilyClient
 from dotenv import load_dotenv
 from rich import print
+import time
 load_dotenv()
 
 
 tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 
 @tool
-def web_search(query : str) -> str:
-    """ Search the web for recent and reliable information on a topic . retuns Title, URL and snippeds."""
-    results = tavily.search(query=query, max_results=5)
+def web_search(query: str) -> str:
+    """Search the web for recent and reliable information on a topic.
+    Returns title, URL and snippets.
+    """
 
-    out = []
+    for attempt in range(3):
+        try:
+            results = tavily.search(
+                query=query,
+                max_results=5
+            )
 
-    for r in results['results']:
-        out.append(
-                    f"Title: {r['title']}\nURL: {r['url']}\nSnippet: {r['content'][:300]}\n"                )
+            out = []
 
-    return "\n----\n".join(out)
+            for r in results.get("results", []):
+                out.append(
+                    f"Title: {r['title']}\n"
+                    f"URL: {r['url']}\n"
+                    f"Snippet: {r['content'][:300]}\n"
+                )
+
+            if not out:
+                return "No search results found."
+
+            return "\n----\n".join(out)
+
+        except Exception as e:
+            if attempt == 2:
+                return f"Tavily search failed: {str(e)}"
+
+            time.sleep(2)
 
 
 
