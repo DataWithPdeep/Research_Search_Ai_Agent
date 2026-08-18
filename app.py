@@ -428,49 +428,53 @@ if run_btn:
 
 if st.session_state.running and not st.session_state.done:
     results = {}
+
     topic_val = st.session_state.topic_input
 
     # ── Step 1: Search ──
-   # ── Step 1: Search ──
-# ── Step 1: Search ──
-with st.spinner("🔍 Search Agent is working…"):
-    search_agent = build_search_agent()
+    with st.spinner("🔍 Search Agent is working…"):
+        search_agent = build_search_agent()
 
-    try:
-        sr = search_agent.invoke({
+        try:
+            sr = search_agent.invoke({
+                "messages": [
+                    (
+                        "user",
+                        f"Find recent, reliable and detailed information about: {topic_val}"
+                    )
+                ]
+            })
+
+            results["search"] = sr["messages"][-1].content
+            st.session_state.results = dict(results)
+
+        except Exception as e:
+            st.error("❌ Search Agent failed")
+            st.write("Error Type:", type(e).__name__)
+            st.write("Error:", repr(e))
+
+            if hasattr(e, "response") and e.response is not None:
+                st.write("HTTP Status:", e.response.status_code)
+                st.write("Response:", e.response.text)
+
+            st.exception(e)
+            st.stop()
+
+    # ── Step 2: Reader ──
+    with st.spinner("📄 Reader Agent is scraping top resources…"):
+        reader_agent = build_reader_agent()
+
+        rr = reader_agent.invoke({
             "messages": [
                 (
                     "user",
-                    f"Find recent, reliable and detailed information about: {topic_val}"
+                    f"Based on the following search results about '{topic_val}', "
+                    f"pick the most relevant URL and scrape it for deeper content.\n\n"
+                    f"Search Results:\n{results['search'][:800]}"
                 )
             ]
         })
 
-        results["search"] = sr["messages"][-1].content
-        st.session_state.results = dict(results)
-
-    except Exception as e:
-        st.error("❌ Search Agent failed")
-        st.write("Error Type:", type(e).__name__)
-        st.write("Error:", repr(e))
-
-        if hasattr(e, "response") and e.response is not None:
-            st.write("HTTP Status:", e.response.status_code)
-            st.write("Response:", e.response.text)
-
-        st.exception(e)
-        st.stop()
-        
-    # ── Step 2: Reader ──
-    with st.spinner("📄  Reader Agent is scraping top resources…"):
-        reader_agent = build_reader_agent()
-        rr = reader_agent.invoke({
-            "messages": [("user",
-                f"Based on the following search results about '{topic_val}', "
-                f"pick the most relevant URL and scrape it for deeper content.\n\n"
-                f"Search Results:\n{results['search'][:800]}"
-            )]
-        })
         results["reader"] = rr["messages"][-1].content
         st.session_state.results = dict(results)
 
