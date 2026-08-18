@@ -432,6 +432,7 @@ if st.session_state.running and not st.session_state.done:
 
     # ── Step 1: Search ──
    # ── Step 1: Search ──
+# ── Step 1: Search ──
 with st.spinner("🔍 Search Agent is working…"):
     search_agent = build_search_agent()
 
@@ -451,7 +452,13 @@ with st.spinner("🔍 Search Agent is working…"):
     except Exception as e:
         st.error("❌ Search Agent failed")
         st.write("Error Type:", type(e).__name__)
-        st.write("Error:", str(e))
+        st.write("Error:", repr(e))
+
+        if hasattr(e, "response") and e.response is not None:
+            st.write("HTTP Status:", e.response.status_code)
+            st.write("Response:", e.response.text)
+
+        st.exception(e)
         st.stop()
         
     # ── Step 2: Reader ──
